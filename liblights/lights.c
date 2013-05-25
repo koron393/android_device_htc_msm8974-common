@@ -39,20 +39,13 @@ static struct light_state_t g_notification;
 static struct light_state_t g_battery;
 static int g_backlight = 255;
 
-char const*const AMBER_LED_FILE = "/sys/class/leds/amber/brightness";
-char const*const GREEN_LED_FILE = "/sys/class/leds/green/brightness";
+char const*const LED_FILE = "/sys/class/leds/indicator/ModeRGB";
 
 char const*const BUTTON_FILE = "/sys/class/leds/button-backlight/brightness";
-char const*const BUTTON_CURRENTS_FILE = "/sys/class/leds/button-backlight/currents";
-
-char const*const AMBER_BLINK_FILE = "/sys/class/leds/amber/blink";
-char const*const GREEN_BLINK_FILE = "/sys/class/leds/green/blink";
-
 char const*const LCD_BACKLIGHT_FILE = "/sys/class/leds/lcd-backlight/brightness";
 
 enum {
-  LED_AMBER,
-  LED_GREEN,
+  LED_ON,
   LED_BLANK,
 };
 
@@ -63,8 +56,8 @@ enum {
 };
 
 enum {
-  BLINK_MODE_OFF = 0,
-  BLINK_MODE_NORMAL = 1,
+  BLINK_MODE_OFF = 1,
+  BLINK_MODE_NORMAL = 2,
   BLINK_MODE_LONG = 4,
 };
 
@@ -90,6 +83,28 @@ static int write_int(const char* path, int value) {
   return written == -1 ? -errno : 0;
 }
 
+static int write_char(const char* path, char* value) {
+  int fd;
+  int bytes, written;
+  char buffer[20];
+  static int already_warned = 0;
+
+  fd = open(path, O_RDWR);
+  if (fd < 0) {
+    if (already_warned == 0) {
+      ALOGE("write_char failed to open %s, %s\n", path, value);
+      already_warned = 1;
+    }
+    return -errno;
+  }
+
+  bytes = snprintf(buffer, sizeof(buffer), "%s\n", value);
+  written = write(fd, buffer, bytes);
+  close(fd);
+
+  return written == -1 ? -errno : 0;
+}
+
 void init_globals(void) {
   pthread_mutex_init (&g_lock, NULL);
 }
@@ -104,9 +119,11 @@ static void set_speaker_light_locked(UNUSED struct light_device_t *dev,
   unsigned int color = LED_BLANK;
   unsigned int blinkMode = BLINK_MODE_OFF;
 
-  if ((colorRGB >> 8) & 0xFF) color = LED_GREEN;
-  if ((colorRGB >> 16) & 0xFF) color = LED_AMBER;
-  if (((colorRGB >> 8) & 0xFF) > ((colorRGB >> 16) & 0xFF)) color = LED_GREEN;
+  char mcolor[8];
+
+  if ((colorRGB >> 8) & 0xFF) color = LED_ON;
+  if ((colorRGB >> 16) & 0xFF) color = LED_ON;
+  if (((colorRGB >> 8) & 0xFF) > ((colorRGB >> 16) & 0xFF)) color = LED_ON;
 
   if (state->flashMode == LIGHT_FLASH_TIMED)
   {
@@ -129,21 +146,12 @@ static void set_speaker_light_locked(UNUSED struct light_device_t *dev,
   switch (state->flashMode) {
     case LIGHT_FLASH_TIMED:
       switch (color) {
-        case LED_AMBER:
-          write_int(AMBER_LED_FILE, 1);
-          write_int(GREEN_LED_FILE, 0);
-          write_int(AMBER_BLINK_FILE, blinkMode);
-          write_int(GREEN_BLINK_FILE, 0);
-          break;
-        case LED_GREEN:
-          write_int(AMBER_LED_FILE, 0);
-          write_int(GREEN_LED_FILE, 1);
-          write_int(AMBER_BLINK_FILE, 0);
-          write_int(GREEN_BLINK_FILE, blinkMode);
+        case LED_ON:
+          sprintf(mcolor, "%d%06x", blinkMode, colorRGB);
+          write_char(LED_FILE, mcolor);
           break;
         case LED_BLANK:
-          write_int(AMBER_BLINK_FILE, 0);
-          write_int(GREEN_BLINK_FILE, 0);
+          write_int(LED_FILE, 0);
           break;
         default:
           ALOGE("set_led_state colorRGB=%08X, unknown color\n", colorRGB);
@@ -152,21 +160,12 @@ static void set_speaker_light_locked(UNUSED struct light_device_t *dev,
       break;
     case LIGHT_FLASH_NONE:
       switch (color) {
-        case LED_AMBER:
-          write_int(AMBER_LED_FILE, 1);
-          write_int(GREEN_LED_FILE, 0);
-          write_int(AMBER_BLINK_FILE, 0);
-          write_int(GREEN_BLINK_FILE, 0);
-          break;
-        case LED_GREEN:
-          write_int(AMBER_LED_FILE, 0);
-          write_int(GREEN_LED_FILE, 1);
-          write_int(AMBER_BLINK_FILE, 0);
-          write_int(GREEN_BLINK_FILE, 0);
+        case LED_ON:
+          sprintf(mcolor, "1%06x", colorRGB);
+          write_char(LED_FILE, mcolor);
           break;
         case LED_BLANK:
-          write_int(AMBER_LED_FILE, 0);
-          write_int(GREEN_LED_FILE, 0);
+          write_char(LED_FILE, "0");
           break;
       }
       break;
@@ -183,25 +182,20 @@ static void set_speaker_light_locked_dual(UNUSED struct light_device_t *dev,
   unsigned int bcolor = LED_BLANK;
   unsigned int blinkMode = BLINK_MODE_LONG;
 
-  if ((bcolorRGB >> 8) & 0xFF) bcolor = LED_GREEN;
-  if ((bcolorRGB >> 16) & 0xFF) bcolor = LED_AMBER;
+  char mcolor[8];
+
+  if ((bcolorRGB >> 8) & 0xFF) bcolor = LED_ON;
+  if ((bcolorRGB >> 16) & 0xFF) bcolor = LED_ON;
 
   switch (bcolor) {
-    case LED_AMBER:
-      write_int (AMBER_BLINK_FILE, 1);
-      write_int (GREEN_LED_FILE, 1);
-      write_int (AMBER_BLINK_FILE, 4);
-      break;
-    case LED_GREEN:
-      write_int (GREEN_BLINK_FILE, 1);
-      write_int (AMBER_LED_FILE, 1);
-      write_int (GREEN_BLINK_FILE, 4);
+    case LED_ON:
+      sprintf(mcolor, "4%06x", bcolorRGB);
+      write_char(LED_FILE, mcolor);
       break;
     default:
       ALOGE("set_led_state (dual) unexpected color: bcolorRGB=%08x\n", bcolorRGB);
   }
 }
-
 
 static void handle_speaker_battery_locked(struct light_device_t *dev) {
   if (is_lit(&g_battery) && is_lit(&g_notification)) {
@@ -218,18 +212,6 @@ static int rgb_to_brightness(struct light_state_t const* state)
   int color = state->color & 0x00ffffff;
   return ((77 * ((color >> 16) & 0x00ff)) + (150 * ((color >> 8) & 0x00ff)) +
           (29 * (color & 0x00ff))) >> 8;
-}
-
-static int set_light_buttons(UNUSED struct light_device_t* dev,
-                             struct light_state_t const* state) {
-  int err = 0;
-  int brightness = rgb_to_brightness(state);
-  pthread_mutex_lock(&g_lock);
-  err = write_int(BUTTON_FILE, brightness);
-  err = write_int(BUTTON_CURRENTS_FILE, (brightness / 25));
-  pthread_mutex_unlock(&g_lock);
-
-  return 0;
 }
 
 static int set_light_backlight(UNUSED struct light_device_t* dev,
@@ -284,8 +266,6 @@ static int open_lights(const struct hw_module_t* module, char const* name,
 
   if (0 == strcmp(LIGHT_ID_BACKLIGHT, name)) {
     set_light = set_light_backlight;
-  } else if (0 == strcmp(LIGHT_ID_BUTTONS, name)) {
-    set_light = set_light_buttons;
   } else if (0 == strcmp(LIGHT_ID_BATTERY, name)) {
     set_light = set_light_battery;
   } else if (0 == strcmp(LIGHT_ID_ATTENTION, name)) {
