@@ -199,6 +199,10 @@ on boot
     chown system system /sys/class/leds/amber/blink
     chown system system /sys/class/leds/amber/off_timer
 
+    # LED indicator
+    chown system system /sys/class/leds/indicator/ModeRGB
+    chmod 0666 /sys/class/leds/indicator/ModeRGB
+
     # Torch
     chown system system /sys/class/leds/flashlight/brightness
     chmod 0666 /sys/class/leds/flashlight/brightness
