@@ -17,6 +17,7 @@ LOCAL_PATH:= $(call my-dir)
 ifeq ($(TARGET_PROVIDES_LIBLIGHT),true)
 ifeq ($(BOARD_VENDOR),htc)
 ifeq ($(TARGET_BOARD_PLATFORM),msm8974)
+ifneq ($(TARGET_DEVICE),b2wlj)
 
 include $(CLEAR_VARS)
 
@@ -33,6 +34,7 @@ LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_SHARED_LIBRARY)
 
+endif # TARGET_DEVICE
 endif # TARGET_BOARD_PLATFORM
 endif # TARGET_VENDOR
 endif # TARGET_PROVIDES_LIBLIGHT
