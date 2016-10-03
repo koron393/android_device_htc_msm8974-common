@@ -132,3 +132,6 @@ TARGET_RECOVERY_FSTAB := $(LOCAL_PATH)/rootdir/etc/fstab.qcom
 
 # Hardware
 BOARD_HARDWARE_CLASS += hardware/cyanogen/cmhw
+
+# Not block based
+BLOCK_BASED_OTA := false
