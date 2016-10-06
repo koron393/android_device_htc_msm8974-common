@@ -85,6 +85,9 @@ on fs
 
     mount_all /fstab.qcom
 
+    # zRAM swap (must use after mount_all)
+    swapon_all /etc/fstab.swap
+
     setprop ro.crypto.fuse_sdcard true
 
 on post-fs-data
