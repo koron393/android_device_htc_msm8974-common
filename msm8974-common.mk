@@ -116,6 +116,13 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     Gello
 
+# GPS
+PRODUCT_PACKAGES += \
+    libloc_core \
+    libloc_eng \
+    libgps.utils \
+    gps.msm8974
+
 # Graphics
 PRODUCT_PACKAGES += \
     copybit.msm8974 \
