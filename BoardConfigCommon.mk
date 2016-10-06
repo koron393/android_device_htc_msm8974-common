@@ -26,6 +26,10 @@ LOCAL_PATH := device/htc/msm8974-common
 
 BOARD_VENDOR := htc
 
+# Build toolchain
+TARGET_GCC_VERSION_EXP := 4.9-cortex-a15
+ANDROID_COMPILE_WITH_JACK := true
+
 # Bootloader
 TARGET_BOOTLOADER_BOARD_NAME := MSM8974
 TARGET_NO_BOOTLOADER := true
