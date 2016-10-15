@@ -88,13 +88,16 @@ on boot
 
     #Felica
     exec system/bin/felica_startup
+    seclabel u:r:felica:s0
 
 # Felica +
 service felica_daemon /system/bin/felica_daemon
     class late_start
+    seclabel u:r:felica:s0
     oneshot
 
 service felica_agent /system/bin/felica_agent
     class late_start
+    seclabel u:r:felica:s0
     oneshot
 # Felica -
